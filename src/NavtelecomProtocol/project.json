@@ -1,18 +1,18 @@
 ﻿{
   "title": "NavtelecomProtocol",
-  "version": "0.1.1",
-
+  "version": "0.1.2",
   "dependencies": {
-    "SharpNetwork": "0.1.1"
+    "SharpNetwork": "0.1.2"
   },
-
   "frameworks": {
     "net450": {}
   },
-
   "scripts": {
     "postcompile": [
       "dotnet pack --no-build --configuration %compile:Configuration%"
     ]
+  },
+  "buildOptions": {
+    "xmlDoc": true
   }
 }

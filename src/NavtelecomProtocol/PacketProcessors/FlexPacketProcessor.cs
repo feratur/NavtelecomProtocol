@@ -24,6 +24,14 @@ namespace NavtelecomProtocol.PacketProcessors
         /// <summary>
         /// Initializes a new instance of the <see cref="T:NavtelecomProtocol.PacketProcessors.FlexPacketProcessor" /> class.
         /// </summary>
+        /// <param name="processors">Instances of <see cref="T:NavtelecomProtocol.PacketProcessors.Flex.IMessageProcessor" />.</param>
+        public FlexPacketProcessor(params IMessageProcessor[] processors) : this(null, processors.AsEnumerable())
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="T:NavtelecomProtocol.PacketProcessors.FlexPacketProcessor" /> class.
+        /// </summary>
         /// <param name="onReadyMessage">Async action to execute on a fully received FLEX message.</param>
         /// <param name="processors">Instances of <see cref="T:NavtelecomProtocol.PacketProcessors.Flex.IMessageProcessor" />.</param>
         public FlexPacketProcessor(Func<SessionState, byte[], CancellationToken, Task> onReadyMessage,

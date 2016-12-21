@@ -68,9 +68,8 @@ namespace NavtelecomProtocol
                     {
                         var pendingBytes =
                             await
-                                processor.GetPendingBytesAsync(state,
-                                    new ArraySegment<byte>(stream.ReceiveBufferArray, 0, stream.ReceivedBytes),
-                                    stream.SendBuffer, token);
+                                processor.GetPendingBytesAsync(state, stream.ReceiveBufferArray, stream.ReceivedBytes,
+                                    stream.SendBuffer, token).ConfigureAwait(false);
 
                         if (pendingBytes == 0)
                             break;

@@ -1,13 +1,14 @@
 ﻿using System;
 using SharpStructures;
 using System.Linq;
+using NavtelecomProtocol.Interfaces;
 
 namespace NavtelecomProtocol.PacketProcessors.Ntcb
 {
     /// <summary>
     /// NTCB handshake containing device identifier.
     /// </summary>
-    public class IdentityBodyProcessor
+    public class IdentityBodyProcessor : INtcbBodyProcessor
     {
         private static readonly byte[] Response = "*<S".Select(x => (byte)x).ToArray();
 

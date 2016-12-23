@@ -1,8 +1,11 @@
-﻿namespace NavtelecomProtocol.PacketProcessors.Flex
+﻿using System.Linq;
+
+namespace NavtelecomProtocol.PacketProcessors.Flex
 {
     internal static class FlexMessageTable
     {
-        public static int[] FieldSizes = {
+        private static readonly int[] FieldSizes =
+        {
             4,
             2,
             4,
@@ -72,8 +75,6 @@
             4,
             2,
             1,
-
-
             8,
             2,
             1,
@@ -130,13 +131,6 @@
         };
 
         public static int GetFlexMessageSize(SessionState sessionState)
-        {
-            var result = 0;
-
-            for (var i = 0; i < sessionState.FieldMask.Length; ++i)
-                result += (sessionState.FieldMask[i] ? FieldSizes[i] : 0);
-
-            return result;
-        }
+            => sessionState.FieldMask.Select((t, i) => t ? FieldSizes[i] : 0).Sum();
     }
 }

@@ -2,12 +2,12 @@
 using System.Threading.Tasks;
 using SharpStructures;
 
-namespace NavtelecomProtocol.PacketProcessors.Flex
+namespace NavtelecomProtocol.Interfaces
 {
     /// <summary>
     /// FLEX message processor.
     /// </summary>
-    public interface IMessageProcessor
+    public interface IFlexMessageProcessor
     {
         /// <summary>
         /// Returns the number of bytes to read from the stream.

@@ -1,13 +1,14 @@
 ﻿using System;
 using SharpStructures;
 using System.Linq;
+using NavtelecomProtocol.Interfaces;
 
 namespace NavtelecomProtocol.PacketProcessors.Ntcb
 {
     /// <summary>
     /// FLEX protocol handshake.
     /// </summary>
-    public class ProtocolBodyProcessor
+    public class ProtocolBodyProcessor : INtcbBodyProcessor
     {
         private const byte ProtocolIdentifier = 0xB0;
 

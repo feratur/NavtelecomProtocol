@@ -3,13 +3,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using SharpStructures;
 using System.Linq;
+using NavtelecomProtocol.Interfaces;
 
 namespace NavtelecomProtocol.PacketProcessors.Flex
 {
     /// <summary>
     /// '~T' message processor.
     /// </summary>
-    public class MessageProcessorT : IMessageProcessor
+    public class MessageProcessorT : IFlexMessageProcessor
     {
         private static readonly byte[] Response = "~T".Select(x => (byte) x).ToArray();
 

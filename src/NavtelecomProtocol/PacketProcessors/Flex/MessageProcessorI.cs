@@ -3,13 +3,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using SharpStructures;
 using System.Linq;
+using NavtelecomProtocol.Interfaces;
 
 namespace NavtelecomProtocol.PacketProcessors.Flex
 {
     /// <summary>
     /// '~I' message processor.
     /// </summary>
-    public class MessageProcessorI : IMessageProcessor
+    public class MessageProcessorI : IFlexMessageProcessor
     {
         /// <summary>
         /// Returns the number of bytes to read from the stream.

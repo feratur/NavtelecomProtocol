@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using NavtelecomProtocol.PacketProcessors.Ntcb;
 using SharpStructures;
 using System.Linq;
+using NavtelecomProtocol.Interfaces;
 
 namespace NavtelecomProtocol.PacketProcessors
 {
@@ -19,7 +19,7 @@ namespace NavtelecomProtocol.PacketProcessors
 
         #region Private members
 
-        private readonly StringTree<IBodyProcessor> _bodyProcessors = new StringTree<IBodyProcessor>();
+        private readonly StringTree<INtcbBodyProcessor> _bodyProcessors = new StringTree<INtcbBodyProcessor>();
 
         #endregion
 
@@ -27,7 +27,7 @@ namespace NavtelecomProtocol.PacketProcessors
         /// Initializes a new instance of the <see cref="T:NavtelecomProtocol.PacketProcessors.NtcbPacketProcessor" /> class.
         /// </summary>
         /// <param name="bodyProcessors">Instances of <see cref="T:NavtelecomProtocol.PacketProcessors.Ntcb.IBodyProcessor" />.</param>
-        public NtcbPacketProcessor(params IBodyProcessor[] bodyProcessors) : this(bodyProcessors.AsEnumerable())
+        public NtcbPacketProcessor(params INtcbBodyProcessor[] bodyProcessors) : this(bodyProcessors.AsEnumerable())
         {
         }
 
@@ -35,7 +35,7 @@ namespace NavtelecomProtocol.PacketProcessors
         /// Initializes a new instance of the <see cref="T:NavtelecomProtocol.PacketProcessors.NtcbPacketProcessor" /> class.
         /// </summary>
         /// <param name="bodyProcessors">Instances of <see cref="T:NavtelecomProtocol.PacketProcessors.Ntcb.IBodyProcessor" />.</param>
-        public NtcbPacketProcessor(IEnumerable<IBodyProcessor> bodyProcessors)
+        public NtcbPacketProcessor(IEnumerable<INtcbBodyProcessor> bodyProcessors)
         {
             foreach (var bodyProcessor in bodyProcessors)
                 _bodyProcessors.Add(bodyProcessor.MessageIdentifier, bodyProcessor);

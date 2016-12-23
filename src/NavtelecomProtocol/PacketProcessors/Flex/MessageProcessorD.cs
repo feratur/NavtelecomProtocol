@@ -3,13 +3,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using SharpStructures;
 using System.Linq;
+using NavtelecomProtocol.Interfaces;
 
 namespace NavtelecomProtocol.PacketProcessors.Flex
 {
     /// <summary>
     /// '~D' message processor.
     /// </summary>
-    public class MessageProcessorD : IMessageProcessor
+    public class MessageProcessorD : IFlexMessageProcessor
     {
         #region Private members
 

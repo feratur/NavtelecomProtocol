@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SharpStructures;
 using System.Linq;
-using NavtelecomProtocol.PacketProcessors.Flex;
+using NavtelecomProtocol.Interfaces;
 
 namespace NavtelecomProtocol.PacketProcessors
 {
@@ -15,7 +15,7 @@ namespace NavtelecomProtocol.PacketProcessors
     {
         #region Private members
 
-        private readonly IMessageProcessor[] _processors;
+        private readonly IFlexMessageProcessor[] _processors;
 
         private readonly Func<SessionState, byte[], CancellationToken, Task> _onReadyMessage;
 
@@ -25,7 +25,7 @@ namespace NavtelecomProtocol.PacketProcessors
         /// Initializes a new instance of the <see cref="T:NavtelecomProtocol.PacketProcessors.FlexPacketProcessor" /> class.
         /// </summary>
         /// <param name="processors">Instances of <see cref="T:NavtelecomProtocol.PacketProcessors.Flex.IMessageProcessor" />.</param>
-        public FlexPacketProcessor(params IMessageProcessor[] processors) : this(null, processors.AsEnumerable())
+        public FlexPacketProcessor(params IFlexMessageProcessor[] processors) : this(null, processors.AsEnumerable())
         {
         }
 
@@ -35,7 +35,7 @@ namespace NavtelecomProtocol.PacketProcessors
         /// <param name="onReadyMessage">Async action to execute on a fully received FLEX message.</param>
         /// <param name="processors">Instances of <see cref="T:NavtelecomProtocol.PacketProcessors.Flex.IMessageProcessor" />.</param>
         public FlexPacketProcessor(Func<SessionState, byte[], CancellationToken, Task> onReadyMessage,
-            params IMessageProcessor[] processors) : this(onReadyMessage, processors.AsEnumerable())
+            params IFlexMessageProcessor[] processors) : this(onReadyMessage, processors.AsEnumerable())
         {
         }
 
@@ -45,11 +45,11 @@ namespace NavtelecomProtocol.PacketProcessors
         /// <param name="onReadyMessage">Async action to execute on a fully received FLEX message.</param>
         /// <param name="processors">Instances of <see cref="T:NavtelecomProtocol.PacketProcessors.Flex.IMessageProcessor" />.</param>
         public FlexPacketProcessor(Func<SessionState, byte[], CancellationToken, Task> onReadyMessage,
-            IEnumerable<IMessageProcessor> processors)
+            IEnumerable<IFlexMessageProcessor> processors)
         {
             _onReadyMessage = onReadyMessage;
 
-            _processors = new IMessageProcessor[256];
+            _processors = new IFlexMessageProcessor[256];
 
             foreach (var messageProcessor in processors)
                 _processors[(byte) messageProcessor.Identifier] = messageProcessor;

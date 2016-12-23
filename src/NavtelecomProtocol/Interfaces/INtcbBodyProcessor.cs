@@ -1,11 +1,11 @@
 ﻿using SharpStructures;
 
-namespace NavtelecomProtocol.PacketProcessors.Ntcb
+namespace NavtelecomProtocol.Interfaces
 {
     /// <summary>
     /// NTCB body message processor (without a header).
     /// </summary>
-    public interface IBodyProcessor
+    public interface INtcbBodyProcessor
     {
         /// <summary>
         /// NTCB message type string identifier.

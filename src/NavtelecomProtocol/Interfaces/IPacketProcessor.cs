@@ -1,9 +1,8 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using SharpStructures;
 
-namespace NavtelecomProtocol
+namespace NavtelecomProtocol.Interfaces
 {
     /// <summary>
     /// Represents a general processor of the message distinguished by its first byte.

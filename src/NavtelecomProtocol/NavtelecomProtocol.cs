@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 using SharpNetwork;
 using SharpStructures;
 using System.Linq;
+using System.Net.Sockets;
+using System.Text;
+using NavtelecomProtocol.Interfaces;
 
 namespace NavtelecomProtocol
 {
@@ -42,101 +45,137 @@ namespace NavtelecomProtocol
         /// <summary>
         /// Processes the established client-server socket connection.
         /// </summary>
-        /// <param name="stream">Instance of <see cref="T:SharpNetwork.IBufferedSocketStream" /> with a socket connected to a client.</param>
+        /// <param name="socket">Socket connected to a client device.</param>
         /// <param name="token">The token to monitor for cancellation requests.</param>
         /// <returns>A task that represents the asynchronous operation.</returns>
-        public async Task WorkAsync(IBufferedSocketStream stream, CancellationToken token)
+        public async Task WorkAsync(Socket socket, CancellationToken token)
         {
-            try
+            using (var stream = new AsyncBufferedSocketStream(socket))
             {
-                var state = new SessionState();
-
-                for (;;)
+                try
                 {
-                    stream.ClearReceiveBuffer();
-
-                    await stream.ReadToBufferAsync(1, token).ConfigureAwait(false);
-
-                    var processor = _primaryOperators[stream.ReceiveBufferArray[0]];
-
-                    if (processor == null)
-                        throw new ArgumentException($"Unknown message prefix '0x{stream.ReceiveBufferArray[0]:X2}'.");
-
-                    stream.SendBuffer.SetPosition(0);
+                    var state = new SessionState();
 
                     for (;;)
                     {
-                        var pendingBytes =
-                            await
-                                processor.GetPendingBytesAsync(state, stream.ReceiveBufferArray, stream.ReceivedBytes,
-                                    stream.SendBuffer, token).ConfigureAwait(false);
+                        stream.ClearReceiveBuffer();
 
-                        if (pendingBytes == 0)
-                            break;
+                        await stream.ReadToBufferAsync(1, token).ConfigureAwait(false);
 
-                        await stream.ReadToBufferAsync(pendingBytes, token).ConfigureAwait(false);
-                    }
+                        var processor = _primaryOperators[stream.ReceiveBufferArray[0]];
 
-                    await stream.WriteBufferToSocketAsync(token).ConfigureAwait(false);
+                        if (processor == null)
+                            throw new ArgumentException($"Unknown message prefix '0x{stream.ReceiveBufferArray[0]:X2}'.");
 
-                    // Workaround until crashes are implemented correctly by the devices
-                    var crashDetected = false;
+                        stream.SendBuffer.SetPosition(0);
 
-                    if (processor.MessageTypeIdentifier == 0x40 && stream.ReceivedBytes >= 22 &&
-                        stream.ReceiveBufferArray.Skip(16).Take(6).Select(x => (char)x).SequenceEqual("*>FLEX"))
-                    {
-                        crashDetected = true;
-                    }
-                    else if (processor.MessageTypeIdentifier == 0x7E && stream.ReceivedBytes >= 2)
-                    {
-                        var reader = new ArrayReader(stream.ReceiveBufferArray, stream.ReceivedBytes, true);
-
-                        const int detectEvent = 0xA03B;
-
-                        switch ((char)stream.ReceiveBufferArray[1])
+                        for (;;)
                         {
-                            case 'T':
-                                if (stream.ReceivedBytes < 12)
-                                    break;
-                                reader.SetPosition(10);
-                                var numType = reader.ReadUInt16();
-                                if (numType == detectEvent)
-                                    crashDetected = true;
+                            var pendingBytes =
+                                await
+                                    processor.GetPendingBytesAsync(state, stream.ReceiveBufferArray,
+                                        stream.ReceivedBytes,
+                                        stream.SendBuffer, token).ConfigureAwait(false);
+
+                            if (pendingBytes == 0)
                                 break;
-                            case 'A':
-                                if (stream.ReceivedBytes < 4)
+
+                            await stream.ReadToBufferAsync(pendingBytes, token).ConfigureAwait(false);
+                        }
+
+                        await stream.WriteBufferToSocketAsync(token).ConfigureAwait(false);
+
+                        // Workaround until crashes are implemented correctly by the devices
+                        var crashDetected = false;
+
+                        if (processor.MessageTypeIdentifier == 0x40 && stream.ReceivedBytes >= 22 &&
+                            stream.ReceiveBufferArray.Skip(16).Take(6).Select(x => (char) x).SequenceEqual("*>FLEX"))
+                        {
+                            crashDetected = true;
+                        }
+                        else if (processor.MessageTypeIdentifier == 0x7E && stream.ReceivedBytes >= 2)
+                        {
+                            var reader = new ArrayReader(stream.ReceiveBufferArray, stream.ReceivedBytes, true);
+
+                            const int detectEvent = 0xA03B;
+
+                            switch ((char) stream.ReceiveBufferArray[1])
+                            {
+                                case 'T':
+                                    if (stream.ReceivedBytes < 12)
+                                        break;
+                                    reader.SetPosition(10);
+                                    var numType = reader.ReadUInt16();
+                                    if (numType == detectEvent)
+                                        crashDetected = true;
                                     break;
-                                var eventCount = stream.ReceiveBufferArray[2];
-                                if (eventCount <= 0)
+                                case 'A':
+                                    if (stream.ReceivedBytes < 4)
+                                        break;
+                                    var eventCount = stream.ReceiveBufferArray[2];
+                                    if (eventCount <= 0)
+                                        break;
+                                    var eventLength = (stream.ReceivedBytes - 4)/eventCount;
+                                    if (eventLength < 6)
+                                        break;
+                                    for (var i = 0; i < eventCount; ++i)
+                                    {
+                                        reader.SetPosition(7 + i*eventLength);
+                                        var eventType = reader.ReadUInt16();
+                                        if (eventType != detectEvent)
+                                            continue;
+                                        crashDetected = true;
+                                        break;
+                                    }
                                     break;
-                                var eventLength = (stream.ReceivedBytes - 4) / eventCount;
-                                if (eventLength < 6)
-                                    break;
-                                for (var i = 0; i < eventCount; ++i)
-                                {
-                                    reader.SetPosition(7 + i * eventLength);
-                                    var eventType = reader.ReadUInt16();
-                                    if (eventType != detectEvent)
-                                        continue;
-                                    crashDetected = true;
-                                    break;
-                                }
-                                break;
+                            }
+                        }
+
+                        if (crashDetected)
+                        {
+                            stream.SendBuffer.SetPosition(0);
+
+                            new MemoryBufferWriter(stream.SendBuffer, true).Write(CrashInformation.CrashInfoQuery);
+
+                            await stream.WriteBufferToSocketAsync(token).ConfigureAwait(false);
                         }
                     }
 
-                    if (crashDetected)
-                    {
-                        stream.SendBuffer.SetPosition(0);
-
-                        new MemoryBufferWriter(stream.SendBuffer, true).Write(CrashInformation.CrashInfoQuery);
-
-                        await stream.WriteBufferToSocketAsync(token).ConfigureAwait(false);
-                    }
                 }
-            }
-            catch (SocketStreamException)
-            {
+                catch (SocketStreamException)
+                {
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    string receivedBytes = null;
+
+                    try
+                    {
+                        var bytesLeft = stream.Client.Available;
+
+                        if (bytesLeft > 0)
+                            await stream.ReadToBufferAsync(bytesLeft, CancellationToken.None).ConfigureAwait(false);
+
+                        var hex = new StringBuilder(stream.ReceivedBytes * 2);
+
+                        foreach (var b in stream.ReceiveBufferArray.Take(stream.ReceivedBytes))
+                            hex.Append(b.ToString("X2"));
+
+                        receivedBytes = hex.ToString();
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
+
+                    var exceptionMessage = $"Error: {ex.Message}. Receive buffer: {receivedBytes ?? "NA"}.";
+
+                    throw new Exception(exceptionMessage, ex);
+                }
             }
         }
     }

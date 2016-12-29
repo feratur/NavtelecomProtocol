@@ -38,13 +38,13 @@ namespace NavtelecomProtocol.PacketProcessors.Flex
         /// Returns the number of bytes to read from the stream.
         /// </summary>
         /// <param name="state">Instance of <see cref="T:NavtelecomProtocol.SessionState" />.</param>
-        /// <param name="reader"><see cref="T:SharpStructures.ArrayReader" /> linked to a FLEX message body.</param>
+        /// <param name="reader"><see cref="T:SharpStructures.BinaryListReader" /> linked to a FLEX message body.</param>
         /// <param name="writer"><see cref="T:SharpStructures.MemoryBufferWriter" /> with data to be sent to the client.</param>
         /// <param name="token">The token to monitor for cancellation requests.</param>
         /// <returns>A task that represents the asynchronous operation. Contains the total number of bytes to read from the socket. Zero bytes to stop reading and send the response.</returns>
-        public async Task<int> GetPendingBytesAsync(SessionState state, ArrayReader reader, MemoryBufferWriter writer, CancellationToken token)
+        public async Task<int> GetPendingBytesAsync(SessionState state, BinaryListReader reader, MemoryBufferWriter writer, CancellationToken token)
         {
-            switch (reader.Length)
+            switch (reader.ByteList.Count)
             {
                 case 2:
                     return 13;
@@ -53,7 +53,7 @@ namespace NavtelecomProtocol.PacketProcessors.Flex
 
                     return reader.ReadUInt16() + 1;
                 default:
-                    if (reader.Array[reader.Length - 1] != BinaryUtilities.GetCrc8(reader.Array.Take(reader.Length - 1)))
+                    if (reader.ByteList.Last() != BinaryUtilities.GetCrc8(reader.ByteList.Take(reader.ByteList.Count - 1)))
                         throw new ArgumentException("Invalid FLEX message CRC.");
 
                     reader.SetPosition(4);
@@ -65,7 +65,9 @@ namespace NavtelecomProtocol.PacketProcessors.Flex
 
                     if (state.CrashInfo != null && result == 0x00 && state.CrashInfo.Timestamp == crashTime)
                     {
-                        Buffer.BlockCopy(reader.Array, 15, state.CrashInfo.Data, (int)offset, sizeRead);
+                        for (var i = 0; i < sizeRead; ++i)
+                            state.CrashInfo.Data[offset + i] = reader.ByteList[15 + i];
+
                         state.CrashInfo.Offset = offset + sizeRead;
 
                         var bytesLeft = state.CrashInfo.Data.Length - state.CrashInfo.Offset;

@@ -6,18 +6,6 @@ namespace NavtelecomProtocol
 {
     internal static class BinaryUtilities
     {
-        public static byte GetXorSum(byte[] buffer) => GetXorSum(buffer, 0, buffer.Length);
-
-        public static byte GetXorSum(byte[] buffer, int offset, int length)
-        {
-            byte result = 0;
-
-            for (var i = offset; i < length; ++i)
-                result ^= buffer[i];
-
-            return result;
-        }
-
         public static byte GetXorSum(IEnumerable<byte> bytes)
         {
             return bytes.Aggregate<byte, byte>(0, (current, b) => (byte)(current ^ b));

@@ -17,38 +17,22 @@ namespace NavtelecomProtocol.PacketProcessors
 
         private readonly IFlexMessageProcessor[] _processors;
 
-        private readonly Func<SessionState, byte[], CancellationToken, Task> _onReadyMessage;
-
         #endregion
 
         /// <summary>
         /// Initializes a new instance of the <see cref="T:NavtelecomProtocol.PacketProcessors.FlexPacketProcessor" /> class.
         /// </summary>
         /// <param name="processors">Instances of <see cref="T:NavtelecomProtocol.PacketProcessors.Flex.IMessageProcessor" />.</param>
-        public FlexPacketProcessor(params IFlexMessageProcessor[] processors) : this(null, processors.AsEnumerable())
+        public FlexPacketProcessor(params IFlexMessageProcessor[] processors) : this(processors.AsEnumerable())
         {
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="T:NavtelecomProtocol.PacketProcessors.FlexPacketProcessor" /> class.
         /// </summary>
-        /// <param name="onReadyMessage">Async action to execute on a fully received FLEX message.</param>
         /// <param name="processors">Instances of <see cref="T:NavtelecomProtocol.PacketProcessors.Flex.IMessageProcessor" />.</param>
-        public FlexPacketProcessor(Func<SessionState, byte[], CancellationToken, Task> onReadyMessage,
-            params IFlexMessageProcessor[] processors) : this(onReadyMessage, processors.AsEnumerable())
+        public FlexPacketProcessor(IEnumerable<IFlexMessageProcessor> processors)
         {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="T:NavtelecomProtocol.PacketProcessors.FlexPacketProcessor" /> class.
-        /// </summary>
-        /// <param name="onReadyMessage">Async action to execute on a fully received FLEX message.</param>
-        /// <param name="processors">Instances of <see cref="T:NavtelecomProtocol.PacketProcessors.Flex.IMessageProcessor" />.</param>
-        public FlexPacketProcessor(Func<SessionState, byte[], CancellationToken, Task> onReadyMessage,
-            IEnumerable<IFlexMessageProcessor> processors)
-        {
-            _onReadyMessage = onReadyMessage;
-
             _processors = new IFlexMessageProcessor[256];
 
             foreach (var messageProcessor in processors)
@@ -59,35 +43,29 @@ namespace NavtelecomProtocol.PacketProcessors
         /// Returns the number of bytes to read from the stream.
         /// </summary>
         /// <param name="sessionState">Instance of <see cref="T:NavtelecomProtocol.SessionState" />.</param>
-        /// <param name="buffer">Receive buffer (array length may be more than the real number of received bytes - parameter <paramref name="length" />).</param>
-        /// <param name="length">The number of received bytes.</param>
+        /// <param name="receiveBuffer">A read-only collection of bytes received from a stream.</param>
         /// <param name="sendBuffer"><see cref="T:SharpStructures.MemoryBuffer" /> with data to be sent to the client.</param>
         /// <param name="token">The token to monitor for cancellation requests.</param>
         /// <returns>A task that represents the asynchronous operation. Contains the total number of bytes to read from the socket. Zero bytes to stop reading and send the response.</returns>
-        public async Task<int> GetPendingBytesAsync(SessionState sessionState, byte[] buffer, int length,
+        public async Task<int> GetPendingBytesAsync(SessionState sessionState, IReadOnlyList<byte> receiveBuffer,
             MemoryBuffer sendBuffer, CancellationToken token)
         {
-            switch (length)
+            switch (receiveBuffer.Count)
             {
                 case 1:
                     return 1;
                 default:
-                    var processor = _processors[buffer[1]];
+                    var processor = _processors[receiveBuffer[1]];
 
                     if (processor == null)
                         throw new ArgumentOutOfRangeException(
-                            $"Unknown FLEX message identifier '0x{buffer[1]:X2}'.");
+                            $"Unknown FLEX message identifier '0x{receiveBuffer[1]:X2}'.");
 
                     var pendingBytes =
                         await
                             processor.GetPendingBytesAsync(sessionState,
-                                new ArrayReader(buffer, length, true),
+                                new BinaryListReader(receiveBuffer, true), 
                                 new MemoryBufferWriter(sendBuffer, true), token).ConfigureAwait(false);
-
-                    if (pendingBytes == 0 && _onReadyMessage != null)
-                        await
-                            _onReadyMessage(sessionState, buffer.Take(length).ToArray(), token)
-                                .ConfigureAwait(false);
 
                     return pendingBytes;
             }

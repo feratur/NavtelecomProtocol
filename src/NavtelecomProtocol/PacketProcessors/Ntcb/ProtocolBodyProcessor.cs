@@ -21,9 +21,9 @@ namespace NavtelecomProtocol.PacketProcessors.Ntcb
         /// Processes the body of the message.
         /// </summary>
         /// <param name="state">Instance of <see cref="T:NavtelecomProtocol.SessionState" />.</param>
-        /// <param name="reader"><see cref="T:SharpStructures.ArrayReader" /> linked to an NTCB message body.</param>
+        /// <param name="reader"><see cref="T:SharpStructures.BinaryListReader" /> linked to an NTCB message body.</param>
         /// <param name="writer"><see cref="T:SharpStructures.MemoryBufferWriter" /> with data to be sent to the client.</param>
-        public void ProcessBody(SessionState state, ArrayReader reader, MemoryBufferWriter writer)
+        public void ProcessBody(SessionState state, BinaryListReader reader, MemoryBufferWriter writer)
         {
             if (!reader.ReadBytes(MessageIdentifier.Length).Select(x => (char)x).SequenceEqual(MessageIdentifier))
                 throw new ArgumentException("NTCB identity message prefix does not match.");

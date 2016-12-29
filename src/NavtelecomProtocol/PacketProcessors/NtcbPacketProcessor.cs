@@ -45,19 +45,18 @@ namespace NavtelecomProtocol.PacketProcessors
         /// Returns the number of bytes to read from the stream.
         /// </summary>
         /// <param name="sessionState">Instance of <see cref="T:NavtelecomProtocol.SessionState" />.</param>
-        /// <param name="buffer">Receive buffer (array length may be more than the real number of received bytes - parameter <paramref name="length" />).</param>
-        /// <param name="length">The number of received bytes.</param>
+        /// <param name="receiveBuffer">A read-only collection of bytes received from a stream.</param>
         /// <param name="sendBuffer"><see cref="T:SharpStructures.MemoryBuffer" /> with data to be sent to the client.</param>
         /// <param name="token">The token to monitor for cancellation requests.</param>
         /// <returns>A task that represents the asynchronous operation. Contains the total number of bytes to read from the socket. Zero bytes to stop reading and send the response.</returns>
-        public Task<int> GetPendingBytesAsync(SessionState sessionState, byte[] buffer, int length, MemoryBuffer sendBuffer, CancellationToken token)
+        public Task<int> GetPendingBytesAsync(SessionState sessionState, IReadOnlyList<byte> receiveBuffer, MemoryBuffer sendBuffer, CancellationToken token)
         {
-            switch (length)
+            switch (receiveBuffer.Count)
             {
                 case 1:
                     return Task.FromResult(HeaderLength - 1);
                 case HeaderLength:
-                    var reader = new ArrayReader(buffer, length, true);
+                    var reader = new BinaryListReader(receiveBuffer, true);
 
                     if (!reader.ReadBytes(HeaderPreamble.Length).Select(x => (char) x).SequenceEqual(HeaderPreamble))
                         throw new ArgumentException("NTCB header preamble does not match.");
@@ -71,21 +70,21 @@ namespace NavtelecomProtocol.PacketProcessors
 
                     var headerChecksum = reader.ReadByte();
 
-                    if (BinaryUtilities.GetXorSum(buffer.Take(HeaderLength - 1)) != headerChecksum)
+                    if (BinaryUtilities.GetXorSum(receiveBuffer.Take(HeaderLength - 1)) != headerChecksum)
                         throw new ArgumentException("NTCB header checksum does not match.");
 
                     return Task.FromResult((int) payloadLength);
                 default:
-                    if (BinaryUtilities.GetXorSum(buffer.Skip(HeaderLength)) != buffer[14])
+                    if (BinaryUtilities.GetXorSum(receiveBuffer.Skip(HeaderLength)) != receiveBuffer[14])
                         throw new ArgumentException("NTCB body checksum does not match.");
 
                     var bodyProcessor =
-                        _bodyProcessors.GetValueOrDefault(buffer.Skip(HeaderLength).Select(x => (char) x));
+                        _bodyProcessors.GetValueOrDefault(receiveBuffer.Skip(HeaderLength).Select(x => (char) x));
 
                     if (bodyProcessor == null)
                         throw new ArgumentException("Unknown NTCB message type.");
 
-                    var bodyReader = new ArrayReader(buffer, length, true);
+                    var bodyReader = new BinaryListReader(receiveBuffer, true);
 
                     bodyReader.SetPosition(HeaderLength);
 

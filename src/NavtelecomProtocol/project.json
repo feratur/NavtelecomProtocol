@@ -1,8 +1,8 @@
-﻿{
+{
   "title": "NavtelecomProtocol",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "dependencies": {
-    "SharpNetwork": "0.1.2"
+    "SharpNetwork": "0.2.0"
   },
   "frameworks": {
     "net450": {}
